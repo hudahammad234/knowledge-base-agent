@@ -1,13 +1,12 @@
 """
-prompt_builder.py
-------------------
+
 Builds the prompts sent to Gemini, including instructions for answer 
 generation and query rewriting based on conversation history.
 """
 
 from typing import List, Dict, Any
 
-# تعليمات توليد الإجابة الصارمة لمنع الهلوسة والالتزام بالمصادر المسترجعة فقط
+#prevent the hallucination and ensure the model only uses the retrieved sources to answer the question
 ANSWER_SYSTEM_INSTRUCTIONS = """You are the AI Knowledge Assistant for a company. \
 Answer the user's question using ONLY the provided context chunks below.
 
