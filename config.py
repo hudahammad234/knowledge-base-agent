@@ -1,10 +1,25 @@
 """
 Shared configuration for the AI Knowledge Assistant project.
-All team members should import settings from here instead of hardcoding values,
-so the whole pipeline stays consistent (same collection name, same paths, etc).
+All team members should import settings from here instead of hardcoding values.
+
+NOTE: This file merges settings needed by Member 1 (embeddings.py / loader.py /
+chunker.py) and Member 2 (retriever.py / query_rewriter.py) into ONE config.py,
+since only one file with this name can exist in the project root.
 """
 
 import os
+
+# --------------------------------------------------------------------------- #
+# Member 1 settings — Document Processing & Embeddings
+# --------------------------------------------------------------------------- #
+
+# "local" (default, free, offline HuggingFace model) or "gemini"
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+
+# --------------------------------------------------------------------------- #
+# Member 2 settings — Vector Database & Retrieval
+# --------------------------------------------------------------------------- #
 
 # --- Vector Database (ChromaDB) ---
 CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_store")

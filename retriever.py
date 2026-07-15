@@ -11,6 +11,9 @@ Responsibilities covered in this file:
 This module is intentionally decoupled from embeddings.py (Member 1's file).
 It expects an `embed_fn(text: str) -> list[float]` callable to be passed in,
 so whichever embedding model Member 1 finalizes, this file doesn't need to change.
+Member 1's embeddings.py returns a LangChain Embeddings object instead of a
+plain callable, so use `embed_fn_from_langchain()` below to adapt it -- see
+that function's docstring for the one-line integration example.
 """
 
 from __future__ import annotations
@@ -43,6 +46,49 @@ class RetrievedChunk:
     def to_citation(self) -> str:
         page_part = f" (p.{self.page_number})" if self.page_number is not None else ""
         return f"{self.document_name}{page_part}"
+
+
+# --------------------------------------------------------------------------- #
+# Integration helpers (bridge Member 1's embeddings.py <-> this module)
+# --------------------------------------------------------------------------- #
+
+def embed_fn_from_langchain(embedding_model) -> Callable[[str], List[float]]:
+    """
+    Adapts a LangChain Embeddings object (what Member 1's
+    embeddings.get_embedding_function() returns) into the plain
+    `str -> list[float]` callable this module expects.
+
+    Usage:
+        from embeddings import get_embedding_function
+        from retriever import embed_fn_from_langchain, VectorStore, retrieve
+
+        embed_fn = embed_fn_from_langchain(get_embedding_function())
+        store = VectorStore()
+        chunks = retrieve("some question", embed_fn=embed_fn, vector_store=store)
+    """
+    return embedding_model.embed_query
+
+
+def sanitize_metadata(metadata: dict) -> dict:
+    """
+    ChromaDB rejects metadata values that are None (raises an error on
+    `collection.add`). Member 1's ChunkMetadata sets page_number=None for
+    file types with no native page concept (DOCX, TXT, MD, CSV), so any
+    None values must be replaced before chunks are inserted into the
+    vector store. Call this on `chunk_metadata.to_dict()` right before
+    `collection.add(...)`.
+    """
+    sanitized = {}
+    for key, value in metadata.items():
+        sanitized[key] = "N/A" if value is None else value
+    return sanitized
+
+
+def _none_if_na(value):
+    """Reverses sanitize_metadata()'s "N/A" sentinel back to None when
+    reading chunks back out of the vector store, so citations render
+    cleanly (e.g. no page number shown for a DOCX chunk)."""
+    return None if value == "N/A" else value
 
 
 # --------------------------------------------------------------------------- #
@@ -92,7 +138,7 @@ class VectorStore:
                 RetrievedChunk(
                     text=text,
                     document_name=meta.get("document_name", "unknown"),
-                    page_number=meta.get("page_number"),
+                    page_number=_none_if_na(meta.get("page_number")),
                     chunk_number=meta.get("chunk_number", -1),
                     score=round(similarity, 4),
                     metadata=meta,
