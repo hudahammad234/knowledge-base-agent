@@ -38,7 +38,7 @@ def validate_answer(question: str, answer: str, chunks: list) -> ValidationResul
     if out_of_scope_phrase in answer:
         return ValidationResult(
             is_supported=True,
-            is_relevent=True,
+            is_relevant=True,
             has_hallucination=False,
             citations_correct=True,
             confidence=1.0,
@@ -73,7 +73,7 @@ Verify carefully:
         # Fallback in case of API failure
         return ValidationResult(
             is_supported=False,
-            is_relevent=False,
+            is_relevant=False,
             has_hallucination=True,
             confidence=0.0,
             citations_correct=False,
