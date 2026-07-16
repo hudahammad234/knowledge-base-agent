@@ -25,6 +25,23 @@ def generate_answer(question: str, chunks: list, llm=None) -> str:
     """Generates a grounded answer for `question` using the retrieved `chunks`."""
     if llm is None:
         llm = get_llm()
-    prompt = build_answer_prompt(question, chunks)
-    response = llm.invoke(prompt)
-    return response.content
+    from validator import validate_answer
+    max_attempts=2
+
+    for attempt in range(max_attempts):
+      prompt = build_answer_prompt(question, chunks)
+      response = llm.invoke(prompt)
+      candidate_answer=response.content
+
+
+      validation= validate_answer(question, candidate_answer, chunks)
+
+      if validation.is_supported and not validation.has_hallucination and validation.is_relevant:
+            return candidate_answer
+
+      print(f"Attempt {attempt+1}/{max_attempts}: Validation failed. Response: {candidate_answer}, Validation: {validation.dict()}")
+      print("Retrying with a new answer...")
+
+
+    return f"Failed to generate a valid answer after {max_attempts} attempts. Last validation result: {validation.dict()}"
+
