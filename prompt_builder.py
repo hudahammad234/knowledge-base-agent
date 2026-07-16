@@ -45,21 +45,3 @@ Context:
 Question: {question}
 
 Answer:"""
-
-
-def rewrite_query(question: str, history: str) -> str:
-    """Builds a prompt to reformulate a follow-up or ambiguous query into a search-friendly query."""
-    return f"""You are an expert search query rewriter. 
-Your task is to take a user's question and the conversation history, and output a single, self-contained, and fully-specified search query that can be used to search a vector store database.
-
-Rules:
-- If the question is already specific and does not refer to history, output it exactly as is.
-- If the question contains pronouns or implicit references (e.g., "What about maternity leave?", "Is it paid?", "Vacation"), resolve them using the conversation history.
-- Do NOT output any conversational text, pleasantries, or explanations. Just output the rewritten search query.
-
-Conversation History:
-{history if history else "(No prior history)"}
-
-User Question: {question}
-
-Search Query:"""
