@@ -15,6 +15,8 @@ import os
 
 # "local" (default, free, offline HuggingFace model) or "gemini"
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local")
+
+# Google API Key (used by embeddings if Gemini embeddings are selected)
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # --------------------------------------------------------------------------- #
@@ -30,6 +32,12 @@ DEFAULT_TOP_K = int(os.getenv("DEFAULT_TOP_K", "5"))
 DEDUP_SIMILARITY_THRESHOLD = float(os.getenv("DEDUP_SIMILARITY_THRESHOLD", "0.95"))
 MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "3000"))
 
-# --- Gemini (used by query_rewriter.py only) ---
+# --------------------------------------------------------------------------- #
+# Member 3 compatibility — Gemini
+# --------------------------------------------------------------------------- #
+
+# Gemini model used by query_rewriter.py / generator.py / validator.py
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Use GEMINI_API_KEY if available; otherwise fall back to GOOGLE_API_KEY.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", GOOGLE_API_KEY)
