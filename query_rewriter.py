@@ -101,3 +101,28 @@ def _build_prompt(
         f'Current user question: "{user_question}"\n\n'
         f"Rewritten, self-contained query:"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Integration helper (bridge memory.py's turn format <-> this module)
+# --------------------------------------------------------------------------- #
+
+def history_from_memory_turns(turns: List[dict]) -> List[dict]:
+    """
+    Converts memory.py's ConversationMemory.get_history() turn format
+    (keys: "question", "answer") into the "role"/"content" format that
+    rewrite_query() expects.
+
+    Usage:
+        from memory import ConversationMemory
+        from query_rewriter import rewrite_query, history_from_memory_turns
+
+        turns = memory.get_history(session_id)
+        history = history_from_memory_turns(turns)
+        rewritten = rewrite_query(question, conversation_history=history)
+    """
+    history: List[dict] = []
+    for turn in turns:
+        history.append({"role": "user", "content": turn["question"]})
+        history.append({"role": "assistant", "content": turn["answer"]})
+    return history
