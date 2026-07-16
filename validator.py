@@ -1,12 +1,10 @@
 """
-
 Uses structured Gemini outputs to validate if generated answers are grounded
 in the retrieved context and checks for hallucinations.
 """
 
 from typing import Optional
 from pydantic import BaseModel, Field
-from generator import get_llm
 
 
 class ValidationResult(BaseModel):
@@ -32,7 +30,10 @@ class ValidationResult(BaseModel):
 
 def validate_answer(question: str, answer: str, chunks: list) -> ValidationResult:
     """Validates the generated answer against the retrieved chunks using Gemini with Structured Outputs."""
-    
+
+    # Import here to avoid circular import between generator.py and validator.py
+    from generator import get_llm
+
     # If the assistant responded with the pre-defined out-of-scope answer, it is safe and validated
     out_of_scope_phrase = "I don't have enough information in the knowledge base to answer that."
     if out_of_scope_phrase in answer:
@@ -63,12 +64,14 @@ Verify carefully:
 """
 
     llm = get_llm()
+
     # Use Structured Output with Pydantic schema to ensure deterministic validation results
     structured_llm = llm.with_structured_output(ValidationResult)
-    
+
     try:
         result = structured_llm.invoke(validation_prompt)
         return result
+
     except Exception as e:
         # Fallback in case of API failure
         return ValidationResult(
