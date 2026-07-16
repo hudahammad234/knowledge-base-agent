@@ -47,7 +47,7 @@ Question: {question}
 Answer:"""
 
 
-def build_rewrite_prompt(question: str, history: str) -> str:
+def rewrite_query(question: str, history: str) -> str:
     """Builds a prompt to reformulate a follow-up or ambiguous query into a search-friendly query."""
     return f"""You are an expert search query rewriter. 
 Your task is to take a user's question and the conversation history, and output a single, self-contained, and fully-specified search query that can be used to search a vector store database.
