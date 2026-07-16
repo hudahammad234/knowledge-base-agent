@@ -47,6 +47,19 @@ class RetrievedChunk:
         page_part = f" (p.{self.page_number})" if self.page_number is not None else ""
         return f"{self.document_name}{page_part}"
 
+    # ------------------------------------------------------------------- #
+    # Dict-style access compatibility layer
+    # ------------------------------------------------------------------- #
+    # Member 3's prompt_builder.py / validator.py treat each chunk as a plain
+    # dict (chunk['text'], chunk.get('page_number')). Rather than asking
+    # Member 3 to rewrite their code to use attribute access, RetrievedChunk
+    # supports both styles: chunk.text AND chunk['text'] both work.
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
 
 # --------------------------------------------------------------------------- #
 # Integration helpers (bridge Member 1's embeddings.py <-> this module)
