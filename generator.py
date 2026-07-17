@@ -37,7 +37,27 @@ def generate_answer(question: str, chunks: list, llm=None) -> str:
       validation= validate_answer(question, candidate_answer, chunks)
 
       if validation.is_supported and not validation.has_hallucination and validation.is_relevant:
-            return candidate_answer
+        
+            if chunks:
+                avg_similarity = sum(chunk.get('score', 0.0) for chunk in chunks) / len(chunks)
+            else:
+                avg_similarity = 0.0
+                
+            
+            chunk_count = len(chunks)
+            chunk_factor = min(1.0, (0.5 if chunk_count >= 1 else 0.0) + 
+                                    (0.25 if chunk_count >= 2 else 0.0) + 
+                                    (0.25 if chunk_count >= 3 else 0.0))
+            
+            
+            validator_confidence = validation.confidence if validation.confidence is not None else 1.0
+            
+            final_confidence = (avg_similarity * 0.40) + (chunk_factor * 0.20) + (validator_confidence * 0.40)
+            final_confidence_percentage = round(final_confidence * 100, 1)
+
+          
+            return f"{candidate_answer}\n\n[Confidence Score: {final_confidence_percentage}%]"
+            
 
       print(f"Attempt {attempt+1}/{max_attempts}: Validation failed. Response: {candidate_answer}, Validation: {validation.dict()}")
       print("Retrying with a new answer...")
