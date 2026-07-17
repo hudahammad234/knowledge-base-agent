@@ -12,7 +12,7 @@ from datetime import datetime
 import config
 from memory import ConversationMemory
 from query_rewriter import rewrite_query, history_from_memory_turns
-from retriever import VectorStore, embed_fn_from_langchain, retrieve
+from retriever import VectorStore, embed_fn_from_langchain, hybrid_retrieve
 from embeddings import get_embedding_function
 from generator import generate_answer
 from validator import validate_answer
@@ -71,10 +71,14 @@ def _get_embed_fn():
         _embed_fn = embed_fn_from_langchain(get_embedding_function())
     return _embed_fn
 
-
 def retrieve_relevant_chunks(query: str, top_k: int = config.DEFAULT_TOP_K):
-    """Embeds `query` and returns the top-k deduplicated chunks from the vector store."""
-    return retrieve(query, embed_fn=_get_embed_fn(), vector_store=_get_vector_store(), top_k=top_k)
+    """Embeds query and returns hybrid semantic + keyword retrieved chunks."""
+    return hybrid_retrieve(
+        query,
+        embed_fn=_get_embed_fn(),
+        vector_store=_get_vector_store(),
+        top_k=top_k
+    )
 
 
 # --------------------------------------------------------------------------- #
