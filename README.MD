@@ -60,7 +60,7 @@ project/
 - README.md
 
 
-##Setup
+Setup
 
 1. Install dependencies: pip install -r requirements.txt
 
@@ -70,7 +70,7 @@ project/
 
 4. Run: python main.py to load, chunk, embed, and evaluate documents.
 
-##Bonus Features Implemented
+Bonus Features Implemented
 
 •
 Document Summarization (knowledge_base/summarizer.py): Generates and caches a short summary per document on indexing.
