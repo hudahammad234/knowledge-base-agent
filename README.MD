@@ -60,17 +60,17 @@ project/
 - README.md
 
 
-Setup
+##Setup
 
-1.Install dependencies: pip install -r requirements.txt
+1. Install dependencies: pip install -r requirements.txt
 
-2.Configure .env: Set GEMINI_API_KEY and optional EMBEDDING_PROVIDER, CHROMA_PERSIST_DIR, etc.
+2. Configure .env: Set GEMINI_API_KEY and optional EMBEDDING_PROVIDER, CHROMA_PERSIST_DIR, etc.
 
-3.Place documents: Add files to knowledge_base_docs/.
+3. Place documents: Add files to knowledge_base_docs/.
 
-4.Run: python main.py to load, chunk, embed, and evaluate documents.
+4. Run: python main.py to load, chunk, embed, and evaluate documents.
 
-Bonus Features Implemented
+##Bonus Features Implemented
 
 •
 Document Summarization (knowledge_base/summarizer.py): Generates and caches a short summary per document on indexing.
