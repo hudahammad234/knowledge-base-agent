@@ -5,6 +5,7 @@ generation and query rewriting based on conversation history.
 """
 
 from typing import List, Dict, Any
+from retriever import build_context
 
 #prevent the hallucination and ensure the model only uses the retrieved sources to answer the question
 ANSWER_SYSTEM_INSTRUCTIONS = """You are the AI Knowledge Assistant for a company. \
@@ -22,13 +23,8 @@ Sources: <document_name> (p.<page_number>), <document_name> (p.<page_number>)
 
 
 def build_context_block(chunks: List[Dict[str, Any]]) -> str:
-    """Formats retrieved chunks into a numbered context block with citation tags."""
-    blocks = []
-    for i, chunk in enumerate(chunks, start=1):
-        page_part = f", page {chunk['page_number']}" if chunk.get("page_number") else ""
-        tag = f"[Chunk {i} | Source: {chunk['document_name']}{page_part} | chunk #{chunk['chunk_number']}]"
-        blocks.append(f"{tag}\n{chunk['text']}")
-    return "\n\n---\n\n".join(blocks)
+    """Uses Member 2 context builder with token budget control."""
+    return build_context(chunks)
 
 
 def build_answer_prompt(question: str, chunks: List[Dict[str, Any]]) -> str:
