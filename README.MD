@@ -1,88 +1,63 @@
-AI Knowledge Assistant
+# AI Knowledge Assistant
 
-RAG system for indexing documents (PDF, DOCX, TXT, MD, CSV) and answering questions using retrieved context. Features include query rewriting, deduplication, response validation, conversation memory, and evaluation.
+A RAG-based system for indexing documents (PDF, DOCX, TXT, MD, CSV) and answering user questions using retrieved context. The system includes query rewriting, document deduplication, response validation, conversation memory, and evaluation capabilities.
 
 Built for Shamsieh Technology Services — AI Track, Team Assignment 02.
 
+## Architecture
 
+The system consists of four main modules:
 
+### Member 1 - Knowledge Base Processing
+Responsible for document processing and indexing:
+- `knowledge_base/loader.py`: Discovers and loads supported documents.
+- `knowledge_base/metadata.py`: Handles document and chunk metadata with file hashing.
+- `knowledge_base/chunker.py`: Splits documents using RecursiveCharacterTextSplitter.
+- `knowledge_base/summarizer.py`: Generates document summaries during indexing.
+- `embeddings.py`: Creates embeddings using HuggingFace/Gemini models.
 
-Architecture
+### Member 2 - Retrieval System
+Responsible for searching and preparing relevant context:
+- `retriever.py`:
+  - Uses VectorStore (Chroma with cosine similarity).
+  - Retrieves relevant chunks and removes duplicates.
+  - Supports hybrid retrieval using BM25 and vector search with RRF fusion.
+  - Builds context within token limits.
+- `query_rewriter.py`: Rewrites user queries using conversation history.
 
+### Member 3 - Generation and Validation
+Responsible for generating and validating responses:
+- `prompt_builder.py`: Creates structured prompts for answer generation.
+- `generator.py`: Generates answers using Gemini with validation and retry logic.
+- `validator.py`: Checks answer support, relevance, hallucination, and citation correctness.
+- `memory.py`: Manages conversation history.
 
+### Member 4 - Pipeline, Evaluation, and Export
+Responsible for connecting the system and evaluating performance:
+- `main.py`: Connects and runs the complete pipeline.
+- `evaluation.py`: Contains fixed Q/A evaluation pairs and calculates performance scores.
+- `export.py`: Exports conversations into Markdown and TXT formats.
 
-                     ┌─────────────────────────┐
-                     │   knowledge_base_docs/    │  (PDF / DOCX / TXT / MD / CSV)
-                     └────────────┬──────────────┘
-                                  ▼
- Member 1   ┌─────────────────────────────────────────────┐
-            │ knowledge_base/loader.py   -> discover + read │
-            │ knowledge_base/metadata.py -> DocumentMetadata,│
-            │                               ChunkMetadata,   │
-            │                               file hashing      │
-            │ knowledge_base/chunker.py  -> RecursiveChar-    │
-            │                               TextSplitter      │
-            │ knowledge_base/summarizer.py -> doc summariza-  │
-            │                                 tion on index   │
-            │ embeddings.py              -> HuggingFace/Gemini│
-            └────────────────────┬────────────────────────┘
-                                  ▼
- Member 2   ┌─────────────────────────────────────────────┐
-            │ retriever.py                                  │
-            │   VectorStore (Chroma, cosine)                │
-            │   retrieve()          -> embed -> search ->    │
-            │                           dedup                │
-            │   hybrid_retrieve()   -> BONUS: BM25 + vector  │
-            │                           fused with RRF        │
-            │   build_context()     -> token-budget context   │
-            │ query_rewriter.py     -> rewrite_query()         │
-            │                          history_from_memory_    │
-            │                          turns()                 │
-            └────────────────────┬────────────────────────┘
-                                  ▼
- Member 3   ┌─────────────────────────────────────────────┐
-            │ prompt_builder.py -> build_answer_prompt()      │
-            │ generator.py      -> generate_answer() (Gemini, │
-            │                       validate -> retry loop)    │
-            │ validator.py      -> validate_answer()           │
-            │                       (is_supported, is_relevant,│
-            │                       has_hallucination,          │
-            │                       citations_correct)          │
-            │ memory.py         -> ConversationMemory           │
-            └────────────────────┬────────────────────────┘
-                                  ▼
- Member 4   ┌─────────────────────────────────────────────┐
-            │ main.py       -> wires the full pipeline        │
-            │ evaluation.py -> 27 fixed Q/A pairs, scoring     │
-            │ export.py     -> Markdown / TXT conversation      │
-            │                  export                           │
-            └─────────────────────────────────────────────┘
-
-
-
-Project Structure
-
-
+## Project Structure
 
 project/
-├── knowledge_base/
-│   ├── loader.py           # Member 1
-│   ├── chunker.py          # Member 1
-│   ├── metadata.py         # Member 1
-│   └── summarizer.py       # Member 1 
-├── embeddings.py           # Member 1
-├── retriever.py            # Member 2
-├── query_rewriter.py       # Member 2
-├── prompt_builder.py       # Member 3
-├── generator.py            # Member 3
-├── validator.py            # Member 3
-├── memory.py               # Member 3
-├── export.py               # Member 4
-├── evaluation.py           # Member 4
-├── main.py                 # Member 4
-├── requirements.txt        # Member 4
-└── README.md               # Member 4
-
+- knowledge_base/
+  - loader.py
+  - chunker.py
+  - metadata.py
+  - summarizer.py
+- embeddings.py
+- retriever.py
+- query_rewriter.py
+- prompt_builder.py
+- generator.py
+- validator.py
+- memory.py
+- export.py
+- evaluation.py
+- main.py
+- requirements.txt
+- README.md
 
 
 Setup
