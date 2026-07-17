@@ -271,3 +271,137 @@ def retrieve(
         len(raw_chunks), len(clean_chunks), query,
     )
     return clean_chunks
+
+
+# --------------------------------------------------------------------------- #
+# BONUS: Hybrid Search (Semantic + Keyword), fused with Reciprocal Rank Fusion
+# --------------------------------------------------------------------------- #
+#
+# This section is 100% ADDITIVE. It does not modify retrieve(), VectorStore,
+# or any existing function/signature above, so nothing that already calls
+# retrieve() is affected. It's an opt-in alternative entry point.
+#
+# Why hybrid search: pure semantic (embedding) search sometimes misses exact
+# keyword matches (e.g. an exact policy code, a person's name, a number) that
+# don't embed distinctively. Keyword search (BM25) catches those, but misses
+# paraphrases/synonyms that semantic search catches. Combining both gives
+# better recall than either alone.
+#
+# Why Reciprocal Rank Fusion (RRF) instead of averaging raw scores: cosine
+# similarity (0-1 range) and BM25 scores (unbounded, corpus-dependent range)
+# are NOT on the same scale, so averaging them directly is meaningless
+# without careful normalization. RRF sidesteps this entirely by only using
+# each result's RANK (position) in its own list, not its raw score:
+#
+#     fused_score(chunk) = sum( 1 / (k + rank_in_list) )  for each list
+#                           the chunk appears in
+#
+# A chunk that ranks highly in BOTH the semantic and keyword lists rises to
+# the top of the fused list. k (default 60) is a standard damping constant
+# from the original RRF paper (Cormack et al., 2009) that prevents very
+# top-ranked results from dominating disproportionately.
+
+def _fetch_full_corpus(vector_store: VectorStore):
+    """Pulls every chunk currently in the collection (needed to build a BM25
+    index, since BM25 scores a query against the WHOLE corpus, unlike vector
+    search which Chroma indexes for fast approximate nearest-neighbor lookup)."""
+    data = vector_store.collection.get(include=["documents", "metadatas"])
+    return data["documents"], data["metadatas"]
+
+
+def _keyword_search(
+    query: str,
+    documents: List[str],
+    metadatas: List[dict],
+    top_k: int,
+) -> List[RetrievedChunk]:
+    """BM25 keyword search over the full corpus. Requires `rank_bm25`
+    (add to requirements: `rank_bm25`)."""
+    from rank_bm25 import BM25Okapi  # lazy import: only needed if hybrid search is used
+
+    tokenized_corpus = [doc.lower().split() for doc in documents]
+    bm25 = BM25Okapi(tokenized_corpus)
+    scores = bm25.get_scores(query.lower().split())
+
+    ranked_indices = sorted(range(len(documents)), key=lambda i: scores[i], reverse=True)[:top_k]
+
+    results = []
+    for idx in ranked_indices:
+        if scores[idx] <= 0:
+            continue  # BM25 score of 0 means no keyword overlap at all -- not a real match
+        meta = metadatas[idx]
+        results.append(
+            RetrievedChunk(
+                text=documents[idx],
+                document_name=meta.get("document_name", "unknown"),
+                page_number=_none_if_na(meta.get("page_number")),
+                chunk_number=meta.get("chunk_number", -1),
+                score=float(scores[idx]),
+                metadata=meta,
+            )
+        )
+    return results
+
+
+def hybrid_retrieve(
+    query: str,
+    embed_fn: Callable[[str], List[float]],
+    vector_store: VectorStore,
+    top_k: int = config.DEFAULT_TOP_K,
+    candidate_pool: int = 15,
+    rrf_k: int = 60,
+) -> List[RetrievedChunk]:
+    """
+    Hybrid retrieval: semantic (vector) search + keyword (BM25) search,
+    merged with Reciprocal Rank Fusion, then deduplicated.
+
+    Drop-in alternative to retrieve() -- same return type (List[RetrievedChunk]),
+    so it works with build_context(), prompt_builder.py, and validator.py
+    without any changes on their side.
+
+    Args:
+        candidate_pool: how many candidates to pull from EACH method before
+            fusion (larger than top_k, so fusion has enough overlap to work with).
+        rrf_k: RRF damping constant (60 is the standard default from the
+            original paper; higher = flatter/less aggressive re-ranking).
+    """
+    if vector_store.count() == 0:
+        return []
+
+    # 1. Semantic candidates
+    query_embedding = embed_fn(query)
+    semantic_results = vector_store.query(query_embedding, top_k=candidate_pool)
+
+    # 2. Keyword candidates
+    documents, metadatas = _fetch_full_corpus(vector_store)
+    keyword_results = _keyword_search(query, documents, metadatas, top_k=candidate_pool)
+
+    # 3. Reciprocal Rank Fusion
+    fused_scores: dict = {}
+    chunk_lookup: dict = {}
+
+    for rank, chunk in enumerate(semantic_results):
+        key = f"{chunk.document_name}_{chunk.chunk_number}"
+        fused_scores[key] = fused_scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+        chunk_lookup[key] = chunk
+
+    for rank, chunk in enumerate(keyword_results):
+        key = f"{chunk.document_name}_{chunk.chunk_number}"
+        fused_scores[key] = fused_scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+        chunk_lookup.setdefault(key, chunk)
+
+    ranked_keys = sorted(fused_scores, key=lambda k: fused_scores[k], reverse=True)[: top_k * 2]
+
+    fused_chunks = []
+    for key in ranked_keys:
+        chunk = chunk_lookup[key]
+        chunk.score = round(fused_scores[key], 4)  # replace with fused rank score
+        fused_chunks.append(chunk)
+
+    clean_chunks = deduplicate_chunks(fused_chunks)[:top_k]
+
+    logger.info(
+        "Hybrid retrieve: %s semantic + %s keyword candidates -> %s fused -> %s final for query: %r",
+        len(semantic_results), len(keyword_results), len(fused_chunks), len(clean_chunks), query,
+    )
+    return clean_chunks
