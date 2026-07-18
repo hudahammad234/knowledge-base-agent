@@ -21,7 +21,7 @@ from evaluation import run_pipeline, run_evaluation, generate_evaluation_report
 
 # NOTE: no other member's file defines where the source documents live.
 # Adjust this to wherever your knowledge-base folder actually is.
-KNOWLEDGE_BASE_DIR = "knowledge_base"
+KNOWLEDGE_BASE_DIR = "knowledge_base_docs"
 
 
 def validate_config():
