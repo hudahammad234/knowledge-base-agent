@@ -27,7 +27,7 @@ from evaluation import run_pipeline, run_evaluation, generate_evaluation_report
 
 # NOTE: no other member's file defines where the source documents live.
 # Adjust this to wherever your knowledge-base folder actually is.
-KNOWLEDGE_BASE_DIR = "knowledge_base"
+KNOWLEDGE_BASE_DIR = "knowledge_base_docs"
 
 SUMMARY_STORE_PATH = os.path.join(config.CHROMA_PERSIST_DIR, "document_summaries.json")
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     validate_config()
 
     documents = load_all_documents()
-  llm = get_llm()
+    llm = get_llm()
     summaries = summarize_documents(documents, llm)
     print(f"Summarized {len(summaries)} document(s):")
     for doc_id, summary in summaries.items():
