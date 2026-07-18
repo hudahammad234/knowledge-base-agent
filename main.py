@@ -3,17 +3,22 @@ main.py
 Owner: Member 4 (Evaluation, Export, Final Integration)
 
 Wires together every other member's module into one runnable pipeline:
-  1. Load + chunk the knowledge base documents        (Member 1)
-  2. Embed the chunks and (re)build the vector store  (Member 1 + Member 2)
-  3. Run one sample question through the full pipeline
-  4. Run the fixed evaluation set and save a report    (Member 4)
+  1. Summarize each document during indexing          (Member 1 - bonus)
+  2. Load + chunk the knowledge base documents        (Member 1)
+  3. Embed the chunks and (re)build the vector store  (Member 1 + Member 2)
+  4. Run one sample question through the full pipeline
+  5. Run the fixed evaluation set and save a report    (Member 4)
 """
 from dotenv import load_dotenv
 load_dotenv()
+
+import os
 import uuid
 
 import config
 from knowledge_base.loader import discover_files, load_document
+from knowledge_base.summarizer import DocumentSummaryStore, summarize_if_needed
+from generator import get_llm
 from knowledge_base.chunker import chunk_document
 from embeddings import get_embedding_function
 from retriever import VectorStore, embed_fn_from_langchain, sanitize_metadata
@@ -23,6 +28,8 @@ from evaluation import run_pipeline, run_evaluation, generate_evaluation_report
 # NOTE: no other member's file defines where the source documents live.
 # Adjust this to wherever your knowledge-base folder actually is.
 KNOWLEDGE_BASE_DIR = "knowledge_base"
+
+SUMMARY_STORE_PATH = os.path.join(config.CHROMA_PERSIST_DIR, "document_summaries.json")
 
 
 def validate_config():
@@ -45,6 +52,29 @@ def load_all_documents(folder_path: str = KNOWLEDGE_BASE_DIR):
         documents.append(load_document(file_path))
     return documents
 
+def summarize_documents(documents, llm, store_path: str = SUMMARY_STORE_PATH) -> dict:
+    """BONUS: generates (or reuses a cached) short summary for every loaded
+    document. Unchanged documents (same file_hash) never trigger a new LLM
+    call, so re-running the pipeline on an untouched knowledge base is free.
+
+    Returns {doc_id: summary} for every document.
+    """
+    store = DocumentSummaryStore(store_path)
+    summaries = {}
+    for doc in documents:
+        meta = doc["metadata"]
+        full_text = "\n".join(page["text"] for page in doc["pages"])
+        if not full_text.strip():
+            continue  # nothing to summarize (e.g. a file that failed to load)
+        summaries[meta.doc_id] = summarize_if_needed(
+            llm=llm,
+            store=store,
+            doc_id=meta.doc_id,
+            file_hash=meta.file_hash,
+            document_name=meta.file_name,
+            full_text=full_text,
+        )
+    return summaries
 
 def chunk_documents(documents):
     """Chunks every loaded document into a single flat list of chunk dicts."""
@@ -78,6 +108,11 @@ if __name__ == "__main__":
     validate_config()
 
     documents = load_all_documents()
+  llm = get_llm()
+    summaries = summarize_documents(documents, llm)
+    print(f"Summarized {len(summaries)} document(s):")
+    for doc_id, summary in summaries.items():
+        print(f"  - {doc_id}: {summary[:100]}...")
     chunks = chunk_documents(documents)
     rebuild_vector_store(chunks)
 
