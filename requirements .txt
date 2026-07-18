@@ -12,5 +12,6 @@ docx2txt
 pandas
 python-dotenv
 pydantic
-google-genai>=1.0.0
+google-genai
 python-docx
+rank-bm25
