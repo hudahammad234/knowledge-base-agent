@@ -37,7 +37,7 @@ MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "3000"))
 # --------------------------------------------------------------------------- #
 
 # Gemini model used by query_rewriter.py / generator.py / validator.py
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
 
 # Use GEMINI_API_KEY if available; otherwise fall back to GOOGLE_API_KEY.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", GOOGLE_API_KEY)
