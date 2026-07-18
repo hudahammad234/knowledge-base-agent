@@ -8,7 +8,8 @@ Wires together every other member's module into one runnable pipeline:
   3. Run one sample question through the full pipeline
   4. Run the fixed evaluation set and save a report    (Member 4)
 """
-
+from dotenv import load_dotenv
+load_dotenv()
 import uuid
 
 import config
