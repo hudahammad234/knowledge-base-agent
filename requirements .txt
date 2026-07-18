@@ -12,5 +12,5 @@ docx2txt
 pandas
 python-dotenv
 pydantic
-google-generativeai>=0.7.0
-python-docx 
+google-genai>=1.0.0
+python-docx
